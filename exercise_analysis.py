@@ -57,8 +57,8 @@ class rideData:
 		self.untrimmed_pw = list(self.ride_dataFrame.Watts)						# Important that this copy is deep...
 
 		# Trim power floor
-		self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Watts > power_floor]
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Watts > power_floor]
+		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Watts > power_floor]
+		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Watts > power_floor]
 
 		# Trim hr floor, hr ceiling
 		self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate > hr_floor]
@@ -71,7 +71,7 @@ class rideData:
 								self.ride_dataFrame.Hrate.first_valid_index())
 		last_good_index = min(self.ride_dataFrame.Watts.last_valid_index(),
 								self.ride_dataFrame.Hrate.last_valid_index())	
-		if first_good_index is not None and last_good_index is not None:
+		if first_good_index is not None and last_good_index is not None and self.ride_dataFrame.Watts.max() > 0:
 			self.has_good_data = True	
 			self.ride_dataFrame = self.ride_dataFrame.ix[first_good_index:last_good_index]
 			num_good_indices = last_good_index - first_good_index
@@ -81,21 +81,27 @@ class rideData:
 	def get_bucket_hr_at(self,power):
 		box_length = 90
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		hr_boxes = [numpy.mean(self.ride_dataFrame.Hrate.shift(-5).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		hr_boxes = [numpy.mean(self.ride_dataFrame.Hrate.shift(0).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_boxes = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
-		# canvas = plt.figure()
-		# pw_t_ax = canvas.add_subplot(211)
-		# pw_title = "Power-Hrate buckets for " + self.fileName 
-		# pw_t_ax.set_title(pw_title)
-		# x_list = numpy.arange(len(pw_boxes)) * minutes_per_tick
-		# pw_t_plot = pw_t_ax.scatter(pw_boxes,hr_boxes)
-		# plt.show()
-		# pprint(pw_t_plot['medians'])
-		# canvas.close()
+		
+		last_good_index = self.get_last_index_above(pw_boxes,1)
+		hr_boxes = hr_boxes[:last_good_index]
+		pw_boxes = pw_boxes[:last_good_index]
+		print last_good_index
 
 		power_hr_slope, intercept, r_value, p_value, std_err = st.linregress(pw_boxes,hr_boxes)
 		hr_val = power*power_hr_slope + intercept
 		return hr_val	
+
+	def get_last_index_above(self,raw_list,min_acceptable):
+		dist_from_back = len(raw_list)
+		for i, val in enumerate(reversed(raw_list)):
+			if val >= min_acceptable:
+				dist_from_back = i
+				break
+		last_index = len(raw_list) - dist_from_back
+		return last_index
+
 
 	#---------------------------------------------------
 	def get_fitness_param(self):
@@ -113,7 +119,7 @@ class rideData:
 			param1 = self.get_param1()
 			param2 = self.get_param2()
 			fitness_param = (param1 + param2) / 2
-		return fitness_param
+		return param2
 
 	#---------------------------------------------------
 	def get_param1(self):
@@ -132,7 +138,7 @@ class rideData:
 		 """
 		param2 = 0
 		if self.has_good_data:
-			token_power = 175		# 175 W seems to be at upper end of aerobic
+			token_power = 50		# 175 W seems to be at upper end of aerobic
 			scale_hr_param = 150			
 			param2 = scale_hr_param * (1 / self.get_bucket_hr_at(token_power))
 		return param2		
@@ -164,8 +170,10 @@ class rideData:
 		box_length = 90
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
-
+		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		pw_means = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		# Power-Time and Hrate-time curves (overlaid)
+		# hr_means
 		pw_t_ax = canvas.add_subplot(211)
 		pw_t_ax2 = pw_t_ax.twinx()
 		pw_title = "Power-Hrate response for " + self.fileName 
@@ -184,16 +192,16 @@ class rideData:
 		pw_t_ax2.tick_params(axis='y', colors='blue')
 
 		# Hrate-Power Gaussian kde
-		x = self.ride_dataFrame.Watts.fillna(method='ffill')
-		y = self.ride_dataFrame.Hrate.fillna(method='ffill')		
+		x = pw_means
+		y = hr_means		
 		power_hr_slope, intercept, r_value, p_value, std_err = st.linregress(x,y)
-		xmin = x.min()
-		xmax = x.max()
-		ymin = y.min()
-		ymax = y.max()
+		xmin = numpy.min(x)
+		xmax = numpy.max(x)
+		ymin = numpy.min(y)
+		ymax = numpy.max(y)
 		values = numpy.vstack([x,y])
 		kernel = st.gaussian_kde(values)
-		X, Y = numpy.mgrid[x.min():x.max():100j, y.min():y.max():100j]
+		X, Y = numpy.mgrid[xmin:xmax:100j, ymin:ymax:100j]
 		positions = numpy.vstack([X.ravel(), Y.ravel()])
 		Z = numpy.reshape(kernel(positions).T, X.shape)
 		distr_ax = canvas.add_subplot(212)
@@ -267,6 +275,7 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
+		# numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
