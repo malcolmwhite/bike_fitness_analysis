@@ -162,10 +162,14 @@ class rideData:
 	
 		print "Printing time analysis data for ",self.fileName
 
-		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),45)
-		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),45)
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),60)
+		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),60)
+
+		diff_endog = self.difference_list(endog_var)
+
 		p = 1
-		model_order = (p,1)
+		q = 0
+		model_order = (p,q)
 		model = arma.ARMA(endog_var,order=model_order,exog=exog_var)
 		model_results = model.fit()
 		prediction = model_results.fittedvalues
@@ -173,20 +177,43 @@ class rideData:
 
 		x_list = numpy.arange(0,len(exog_var))
 		x_list1 = numpy.arange(0,len(prediction))
+		x_list2 = numpy.arange(0,len(diff_endog))
 		print model_results.maparams
 		print model_results.arparams
+
 		canvas = plt.figure()
 		ax_arma = canvas.add_subplot(111)
 		# ax_resid = ax_arma.twinx()
-		# ax_arma.plot(x_list,exog_var,label='PW Data',color='red')
+		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
 		# ax_resid.plot(x_list,residuals,label='residuals',color='red')
-		ax_arma.plot(x_list,endog_var,label='HR Data',color='blue')
+		# ax_arma.scatter(x_list2,diff_endog,label='HR Data',color='blue',linewidths =1)
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		# Save and close
 		pdf_pages.savefig(canvas,orientation='portrait')	
 		# plt.show()
 		plt.close()	
+
+		resid_canvas = plt.figure()
+		ax_resid = resid_canvas.add_subplot(111)
+		ax_pw = ax_resid.twinx()
+		ax_resid.plot(x_list1,residuals,label='Residuals',color='green')
+		ax_pw.plot(x_list1,exog_var,label='Power',color='red')
+		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		pdf_pages.savefig(resid_canvas,orientation='portrait')	
+
+		plt.close()	
+
+
+	#---------------------------------------------------
+	def difference_list(self, original_list):
+		d1 = original_list[1:]
+		d2 = original_list[:-1]
+		diff_list = [val1 - val2 for val1, val2 in zip(d1, d2)]
+		return diff_list
+
+
 
 	#---------------------------------------------------
 	def get_box_list(self, original_list, box_length):
@@ -312,7 +339,7 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
-		# numFiles = 1
+		numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
