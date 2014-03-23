@@ -186,7 +186,7 @@ class rideData:
 		resid_dev_from_mean = residuals - power_mean
 		exog_dev_from_mean = exog_var - power_mean
 
-		error_list = (residuals/resid_mean) * (dev_from_pw_mean / power_mean) * (exog_var / power_mean)
+		error_list = (residuals/resid_mean)  * (exog_var / power_mean)
 		max_error = numpy.max(error_list)
 
 		x_list = numpy.arange(0,len(exog_var))
@@ -220,7 +220,7 @@ class rideData:
 		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
 		canvas.tight_layout()
-		
+
 		pdf_pages.savefig(canvas,orientation='portrait')	
 
 		plt.close()	
