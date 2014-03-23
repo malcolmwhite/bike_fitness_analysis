@@ -162,20 +162,34 @@ class rideData:
 	
 		print "Printing time analysis data for ",self.fileName
 
-		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),60)
+		box_size = 185		# box_size < 90 often produce non-stationary variables
+		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
 		endog_var = self.detrend_list(endog_var)
-		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),60)
-		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),60)
+		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
 		diff_endog = self.difference_list(endog_var)
 
 		p = 1
-		q = 1
-		model_order = (p,q)
-		model = arma.ARMA(endog_var,order=model_order,exog=exog_var)
+		q = 0
+		d = 0
+		model_order = (p,d,q)
+		# model = arma.ARMA(endog_var,order=model_order,exog=exog_var)
+		model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
 		model_results = model.fit()
 		prediction = model_results.fittedvalues
 		residuals = model_results.resid
+		min_resid = numpy.min(residuals)
+		power_mean = numpy.mean(exog_var)
+		resid_mean = numpy.mean(numpy.abs(residuals))
+
+		dev_from_pw_mean = numpy.abs(exog_var - power_mean)
+		resid_dev_from_mean = residuals - power_mean
+		exog_dev_from_mean = exog_var - power_mean
+
+		# error_list = resid_dev_from_mean / exog_dev_from_mean
+		error_list = (residuals/resid_mean) * (dev_from_pw_mean / power_mean) * (exog_var / power_mean)
+		max_error = numpy.max(error_list)
 
 		x_list = numpy.arange(0,len(exog_var))
 		x_list1 = numpy.arange(0,len(prediction))
@@ -188,7 +202,7 @@ class rideData:
 		# ax_resid = ax_arma.twinx()
 		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
 		# ax_resid.plot(x_list,residuals,label='residuals',color='red')
-		# ax_arma.scatter(x_list2,diff_endog,label='HR Data',color='blue',linewidths =1)
+		# ax_arma.plot(x_list2,diff_endog,label='HR Data',color='blue')
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		# Save and close
@@ -197,9 +211,10 @@ class rideData:
 		plt.close()	
 
 		resid_canvas = plt.figure()
-		ax_resid = resid_canvas.add_subplot(111)
-		ax_pw = ax_resid.twinx()
-		ax_resid.plot(x_list1,residuals,label='Residuals',color='green')
+		ax_resid = resid_canvas.add_subplot(211)
+		ax_pw = resid_canvas.add_subplot(212)
+		ax_resid.plot(x_list1,error_list,label='Residuals',color='green')
+		ax_resid.set_ylim(0,1.1*max_error)
 		ax_pw.plot(x_list1,exog_var,label='Power',color='red')
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
@@ -350,7 +365,7 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
-		numFiles = 1
+		# numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
@@ -377,7 +392,7 @@ class analysis_driver:
 		if self.print_file:
 			print_filename = "workout_analysis.pdf"
 			pdf_pages = PdfPages(print_filename)
-			self.print_fitness_trend(pdf_pages)
+			# self.print_fitness_trend(pdf_pages)
 			self.print_individual_workouts(pdf_pages)
 			pdf_pages.close()	
 
