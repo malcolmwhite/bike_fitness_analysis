@@ -4,6 +4,7 @@ import sys, getopt, os, math, glob, numpy
 import pandas.io.parsers as parse
 from pandas import DataFrame as df
 import statsmodels.nonparametric.kernel_regression as kr
+import statsmodels.tsa.arima_model as arma
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.tight_layout as plt_l
 
@@ -155,12 +156,48 @@ class rideData:
 		hr_val = power*power_hr_slope + intercept
 		return hr_val	
 
-	
 	#---------------------------------------------------
-	def print_data(self, pdf_pages):
+	def print_time_analysis(self, pdf_pages):
 		"""Function writes results for given ride object to pdf page"""
 	
-		print "Printing data for ",self.fileName
+		print "Printing time analysis data for ",self.fileName
+
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),45)
+		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),45)
+		p = 1
+		model_order = (p,1)
+		model = arma.ARMA(endog_var,order=model_order,exog=exog_var)
+		model_results = model.fit()
+		prediction = model_results.fittedvalues
+		residuals = model_results.resid
+
+		x_list = numpy.arange(0,len(exog_var))
+		x_list1 = numpy.arange(0,len(prediction))
+		print model_results.maparams
+		print model_results.arparams
+		canvas = plt.figure()
+		ax_arma = canvas.add_subplot(111)
+		# ax_resid = ax_arma.twinx()
+		# ax_arma.plot(x_list,exog_var,label='PW Data',color='red')
+		# ax_resid.plot(x_list,residuals,label='residuals',color='red')
+		ax_arma.plot(x_list,endog_var,label='HR Data',color='blue')
+		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
+		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		# Save and close
+		pdf_pages.savefig(canvas,orientation='portrait')	
+		# plt.show()
+		plt.close()	
+
+	#---------------------------------------------------
+	def get_box_list(self, original_list, box_length):
+		box_list = [numpy.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
+		return box_list
+
+	#---------------------------------------------------
+	def print_regressions(self, pdf_pages):
+		"""Function writes results for given ride object to pdf page"""
+	
+		print "Printing regression data for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
 		x_time_plots = numpy.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
@@ -313,7 +350,8 @@ class analysis_driver:
 		"""Function prints a page summarizing each recorded workout"""
 		for it, ride_obj in enumerate(self.ride_obj_list):
 			if ride_obj.has_good_data:
-				ride_obj.print_data(pdf_pages)	
+				# ride_obj.print_regressions(pdf_pages)
+				ride_obj.print_time_analysis(pdf_pages)	
 
 
 	#---------------------------------------------------
