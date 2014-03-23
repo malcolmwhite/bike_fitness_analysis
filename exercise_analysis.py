@@ -162,13 +162,15 @@ class rideData:
 	
 		print "Printing time analysis data for ",self.fileName
 
-		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),60)
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),60)
+		endog_var = self.detrend_list(endog_var)
+		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),60)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),60)
 
 		diff_endog = self.difference_list(endog_var)
 
 		p = 1
-		q = 0
+		q = 1
 		model_order = (p,q)
 		model = arma.ARMA(endog_var,order=model_order,exog=exog_var)
 		model_results = model.fit()
@@ -204,6 +206,15 @@ class rideData:
 		pdf_pages.savefig(resid_canvas,orientation='portrait')	
 
 		plt.close()	
+
+	#---------------------------------------------------
+	def detrend_list(self, original_list):
+		x = xrange(0, len(original_list))
+		slope, intercept, r_value, p_value, std_err = st.linregress(x,original_list)
+		trend_list = [(x * slope + intercept) for x in original_list] 
+		detrended_list = [val1 - val2 for val1, val2 in zip(original_list, trend_list)]
+		return detrended_list
+
 
 
 	#---------------------------------------------------
