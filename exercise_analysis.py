@@ -162,9 +162,11 @@ class rideData:
 	
 		print "Printing time analysis data for ",self.fileName
 
-		box_size = 185		# box_size < 90 often produce non-stationary variables
-		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
-		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
+		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
+		minutes_per_box = 5
+		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
+		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
 		endog_var = self.detrend_list(endog_var)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
@@ -186,12 +188,29 @@ class rideData:
 		resid_dev_from_mean = residuals - power_mean
 		exog_dev_from_mean = exog_var - power_mean
 
-		error_list = (residuals/resid_mean)  * (exog_var / power_mean)
+		error_list = [0]*len(residuals)
+
+		power_floor = power_mean
+		for index, resid_val in enumerate(residuals):
+			power_val = exog_var[index]
+			if power_val > power_floor and resid_val > 0:
+				error_list[index] = resid_val
+
+
+		# error_list = (residuals/resid_mean)  * (exog_var / power_mean)
 		max_error = numpy.max(error_list)
 
 		x_list = numpy.arange(0,len(exog_var))
 		x_list1 = numpy.arange(0,len(prediction))
 		x_list2 = numpy.arange(0,len(diff_endog))
+		tick_locations, tick_labels = plt.xticks()
+		box_x_list = numpy.arange(len(self.untrimmed_hr))* minutes_per_tick
+		print tick_locations
+		# fuck
+		num_ticks = len(tick_locations)
+		tick_step = int(len(box_x_list)/num_ticks)
+		new_tick_labels = box_x_list[0::tick_step] 
+		print new_tick_labels
 		print model_results.maparams
 		print model_results.arparams
 
@@ -200,11 +219,12 @@ class rideData:
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
 		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
+		# plt.xticks(tick_locations*len(endog_var),new_tick_labels)
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		# Save and close
 		# pdf_pages.savefig(canvas,orientation='portrait')	
-		plt.close()	
+		# plt.close()	
 
 		exert_title = "Scaled under-shooting for " + self.fileName 
 		pw_title = "Power impulses for " + self.fileName 
@@ -227,8 +247,8 @@ class rideData:
 
 	#---------------------------------------------------
 	def detrend_list(self, original_list):
-		x = xrange(0, len(original_list))
-		slope, intercept, r_value, p_value, std_err = st.linregress(x,original_list)
+		x_list = xrange(0, len(original_list))
+		slope, intercept, r_value, p_value, std_err = st.linregress(x_list,original_list)
 		trend_list = [(x * slope + intercept) for x in original_list] 
 		detrended_list = [val1 - val2 for val1, val2 in zip(original_list, trend_list)]
 		return detrended_list
