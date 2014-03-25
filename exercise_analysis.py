@@ -39,18 +39,11 @@ class rideData:
 		# Save hr data for visualization. Power data saved below, after winsorization
 		self.untrimmed_hr = list(self.ride_dataFrame.Hrate)						# Important that this copy is deep...
 
-		# Shift hr values. This accomodates for lag in hrate responses to power impulses and improves quality of hrate-power distribution
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.shift(-23)
-
-		# Fill NaN data points with closest valid point to left of NaN
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.fillna(method='bfill')
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.fillna(method='ffill')
-
 		# Find ceiling, floor for valid data (probably not valid to assume gaussian distro.)
 		power_ceiling = self.ride_dataFrame.Watts.quantile(.98)
 		power_floor = max(self.ride_dataFrame.Watts.quantile(.25),20)
-		hr_floor = self.ride_dataFrame.Hrate.quantile(.02)
-		hr_ceiling = self.ride_dataFrame.Hrate.quantile(.98)
+		hr_floor = self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill').quantile(.02)
+		hr_ceiling = self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill').quantile(.98)
 
 		# Winsorize power ceiling and trim power floor
 		self.ride_dataFrame.Watts[self.ride_dataFrame.Watts > power_ceiling] = power_ceiling
@@ -64,9 +57,9 @@ class rideData:
 
 		# Trim hr floor, hr ceiling
 		self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate > hr_floor]
-		self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate < hr_ceiling]
+		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate < hr_ceiling]
 		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate > hr_floor]
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate < hr_ceiling]
+		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate < hr_ceiling]
 
 		# Trim leading / lagging bad indices, reset index values		
 		first_good_index = max(self.ride_dataFrame.Watts.first_valid_index(),
@@ -79,11 +72,14 @@ class rideData:
 			num_good_indices = last_good_index - first_good_index
 			self.ride_dataFrame = self.ride_dataFrame.set_index(numpy.arange(0,num_good_indices+1))
 
+		# Fill Hrate NaNs
+		self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')
+
 
 	def get_bucket_hr_at(self,power):
 		box_length = 90
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		hr_boxes = [numpy.mean(self.ride_dataFrame.Hrate.shift(0).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		hr_boxes = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_boxes = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		
 		last_good_index = self.get_last_index_above(pw_boxes,1)
@@ -275,7 +271,7 @@ class rideData:
 		box_length = 90
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
-		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_means = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		# Power-Time and Hrate-time curves (overlaid)
 
