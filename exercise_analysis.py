@@ -56,9 +56,9 @@ class rideData:
 		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Watts > power_floor]
 
 		# Trim hr floor, hr ceiling
-		self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate > hr_floor]
+		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate > hr_floor]
 		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate < hr_ceiling]
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate > hr_floor]
+		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate > hr_floor]
 		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate < hr_ceiling]
 
 		# Trim leading / lagging bad indices, reset index values		
@@ -184,6 +184,12 @@ class rideData:
 		resid_dev_from_mean = residuals - power_mean
 		exog_dev_from_mean = exog_var - power_mean
 
+		# lower_conf = model_results.conf_int()[0][:]
+		# upper_conf = model_results.conf_int()[1][:]
+		# lower_conf = [pair[0] for pair in model_results.conf_int()] 
+		# upper_conf = [pair[1] for pair in model_results.conf_int()] 
+
+
 		error_list = [0]*len(residuals)
 
 		power_floor = power_mean
@@ -210,11 +216,15 @@ class rideData:
 		print model_results.params
 
 		arx_title = "ARX model for " + self.fileName 
+		# print lower_conf
 		canvas = plt.figure()
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
 		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
+		# ax_arma.scatter(numpy.arange(0,len(lower_conf)), lower_conf, s=1)
+		# ax_arma.scatter(numpy.arange(0,len(upper_conf)), upper_conf, s=1)
 		# plt.xticks(tick_locations*len(endog_var),new_tick_labels)
+
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_arma.set_xlabel('Time (min)')
@@ -435,8 +445,8 @@ class analysis_driver:
 		valid_files_list = []
 
 		title_plt = plt.figure()
-		title_plt.text(0.05,0.7,"Fitness evaluation using (1) linear regression of time avgeraged HR-Power and")
-		title_plt.text(0.31,0.65,"(2) ARX of HR-time with exogenous input of power")
+		title_plt.text(0.05,0.7,"Fitness evaluation using (1) linear regression of time avgeraged HR v. Power and")
+		title_plt.text(0.31,0.65,"(2) ARX of HRate with exogenous input of power")
 		pdf_pages.savefig(title_plt, orientation='portrait')	
 
 
