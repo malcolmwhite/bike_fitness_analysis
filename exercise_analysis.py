@@ -135,7 +135,7 @@ class rideData:
 		 """
 		param2 = 0
 		if self.has_good_data:
-			token_power = 50		# 175 W seems to be at upper end of aerobic
+			token_power = 150		# 175 W seems to be at upper end of aerobic
 			scale_hr_param = 150			
 			param2 = scale_hr_param * (1 / self.get_bucket_hr_at(token_power))
 		return param2		
@@ -217,22 +217,32 @@ class rideData:
 		# plt.xticks(tick_locations*len(endog_var),new_tick_labels)
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		ax_arma.set_xlabel('Time (min)')
+		ax_arma.set_ylabel('Detrended Hrate (bpm)')
+		ax_arma.set_xlim(0,len(x_list1))
+
 		# Save and close
 		# pdf_pages.savefig(canvas,orientation='portrait')	
 		# plt.close()	
 
-		exert_title = "Scaled under-shooting for " + self.fileName 
+		exert_title = "Filtered positive error for " + self.fileName 
 		pw_title = "Power impulses for " + self.fileName 
-		# resid_canvas = plt.figure()
 		ax_resid = canvas.add_subplot(312)
 		ax_resid.set_title(exert_title)
+		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
+		ax_resid.set_xlabel('Time (min)')
+		ax_resid.set_ylabel('Residual (bpm)')
+		ax_resid.set_xlim(0,len(x_list2))
+		ax_resid.set_ylim(0,1.1*max_error)
+		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+
 		ax_pw = canvas.add_subplot(313)
 		ax_pw.set_title(pw_title)
-		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
-		ax_resid.set_ylim(0,1.1*max_error)
+		ax_pw.set_xlabel('Time (min)')
+		ax_pw.set_ylabel('Power (W)')
 		ax_pw.plot(x_list,exog_var,label='Power',color='red')
-		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		ax_pw.set_xlim(0,len(x_list))
 
 		canvas.tight_layout()
 
@@ -375,7 +385,6 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
-		# numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
@@ -424,6 +433,13 @@ class analysis_driver:
 		param1_list = []
 		param2_list = []
 		valid_files_list = []
+
+		title_plt = plt.figure()
+		title_plt.text(0.05,0.7,"Fitness evaluation using (1) linear regression of time avgeraged HR-Power and")
+		title_plt.text(0.31,0.65,"(2) ARX of HR-time with exogenous input of power")
+		pdf_pages.savefig(title_plt, orientation='portrait')	
+
+
 		# Perform linear regression on fitness values to show progress (or lack thereof)
 		for it, ride_obj in enumerate(self.ride_obj_list):
 			if ride_obj.has_good_data:
