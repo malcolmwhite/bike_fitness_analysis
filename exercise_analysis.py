@@ -85,7 +85,6 @@ class rideData:
 		last_good_index = self.get_last_index_above(pw_boxes,1)
 		hr_boxes = hr_boxes[:last_good_index]
 		pw_boxes = pw_boxes[:last_good_index]
-		print last_good_index
 
 		power_hr_slope, intercept, r_value, p_value, std_err = st.linregress(pw_boxes,hr_boxes)
 		hr_val = power*power_hr_slope + intercept
@@ -117,15 +116,15 @@ class rideData:
 			param1 = self.get_param1()
 			param2 = self.get_param2()
 			fitness_param = (param1 + param2) / 2
-		return param2
+		return fitness_param
 
 	#---------------------------------------------------
 	def get_param1(self):
 		"""Function returns mean power / mean heartrate"""
 		param1 = 0
 		if self.has_good_data:
-			mean_power = self.ride_dataFrame.Watts.mean()
-			mean_hrate = self.ride_dataFrame.Hrate.mean()
+			mean_power = self.ride_dataFrame.Watts[self.ride_dataFrame.Watts>0].mean()
+			mean_hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Watts>0].mean()
 			param1 = mean_power / mean_hrate
 		return param1
 
