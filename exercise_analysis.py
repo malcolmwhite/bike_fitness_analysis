@@ -5,6 +5,7 @@ import pandas.io.parsers as parse
 from pandas import DataFrame as df
 import statsmodels.nonparametric.kernel_regression as kr
 import statsmodels.tsa.arima_model as arma
+import statsmodels.tsa.tsatools as tsa
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.tight_layout as plt_l
 
@@ -163,16 +164,16 @@ class rideData:
 		print "Printing time analysis data for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		minutes_per_box = 5
+		minutes_per_box = 1
 		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
 		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
-		endog_var = self.detrend_list(endog_var)
+		endog_var = tsa.detrend(endog_var)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
 		diff_endog = self.difference_list(endog_var)
 
-		p = 1
+		p = 5
 		q = 0
 		d = 0
 		model_order = (p,d,q)
@@ -202,17 +203,16 @@ class rideData:
 
 		x_list = numpy.arange(0,len(exog_var))
 		x_list1 = numpy.arange(0,len(prediction))
-		x_list2 = numpy.arange(0,len(diff_endog))
+		x_list2 = numpy.arange(0,len(error_list))
 		tick_locations, tick_labels = plt.xticks()
 		box_x_list = numpy.arange(len(self.untrimmed_hr))* minutes_per_tick
-		print tick_locations
-		# fuck
+		# print tick_locations
 		num_ticks = len(tick_locations)
 		tick_step = int(len(box_x_list)/num_ticks)
 		new_tick_labels = box_x_list[0::tick_step] 
-		print new_tick_labels
-		print model_results.maparams
-		print model_results.arparams
+		# print new_tick_labels
+		# print model_results.maparams
+		print model_results.params
 
 		arx_title = "ARX model for " + self.fileName 
 		canvas = plt.figure()
@@ -233,9 +233,9 @@ class rideData:
 		ax_resid.set_title(exert_title)
 		ax_pw = canvas.add_subplot(313)
 		ax_pw.set_title(pw_title)
-		ax_resid.plot(x_list1,error_list,label='Residuals',color='green')
+		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
 		ax_resid.set_ylim(0,1.1*max_error)
-		ax_pw.plot(x_list1,exog_var,label='Power',color='red')
+		ax_pw.plot(x_list,exog_var,label='Power',color='red')
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
@@ -244,14 +244,6 @@ class rideData:
 		pdf_pages.savefig(canvas,orientation='portrait')	
 
 		plt.close()	
-
-	#---------------------------------------------------
-	def detrend_list(self, original_list):
-		x_list = xrange(0, len(original_list))
-		slope, intercept, r_value, p_value, std_err = st.linregress(x_list,original_list)
-		trend_list = [(x * slope + intercept) for x in original_list] 
-		detrended_list = [val1 - val2 for val1, val2 in zip(original_list, trend_list)]
-		return detrended_list
 
 
 
