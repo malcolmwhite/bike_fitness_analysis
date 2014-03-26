@@ -163,8 +163,13 @@ class rideData:
 		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
 		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
-		endog_var = tsa.detrend(endog_var)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
+
+		last_good_index = self.get_last_index_above(exog_var, 2)
+		exog_var = exog_var[0:last_good_index]
+		endog_var = endog_var[0:last_good_index]
+
+		endog_var = tsa.detrend(endog_var)
 
 		diff_endog = self.difference_list(endog_var)
 
@@ -235,8 +240,8 @@ class rideData:
 		# pdf_pages.savefig(canvas,orientation='portrait')	
 		# plt.close()	
 
-		exert_title = "Filtered positive error for " + self.fileName 
-		pw_title = "Power impulses for " + self.fileName 
+		exert_title = "Positive error from ARX prediction" 
+		pw_title = "Power used as exog. var. for ARX" 
 		ax_resid = canvas.add_subplot(312)
 		ax_resid.set_title(exert_title)
 		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
