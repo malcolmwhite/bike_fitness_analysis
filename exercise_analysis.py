@@ -189,12 +189,6 @@ class rideData:
 		resid_dev_from_mean = residuals - power_mean
 		exog_dev_from_mean = exog_var - power_mean
 
-		# lower_conf = model_results.conf_int()[0][:]
-		# upper_conf = model_results.conf_int()[1][:]
-		# lower_conf = [pair[0] for pair in model_results.conf_int()] 
-		# upper_conf = [pair[1] for pair in model_results.conf_int()] 
-
-
 		error_list = [0]*len(residuals)
 
 		power_floor = power_mean
@@ -203,42 +197,23 @@ class rideData:
 			if power_val > power_floor and resid_val > 0:
 				error_list[index] = resid_val
 
-
-		# error_list = (residuals/resid_mean)  * (exog_var / power_mean)
 		max_error = numpy.max(error_list)
 
 		x_list = numpy.arange(0,len(exog_var))
 		x_list1 = numpy.arange(0,len(prediction))
 		x_list2 = numpy.arange(0,len(error_list))
-		tick_locations, tick_labels = plt.xticks()
-		box_x_list = numpy.arange(len(self.untrimmed_hr))* minutes_per_tick
-		# print tick_locations
-		num_ticks = len(tick_locations)
-		tick_step = int(len(box_x_list)/num_ticks)
-		new_tick_labels = box_x_list[0::tick_step] 
-		# print new_tick_labels
-		# print model_results.maparams
-		print model_results.params
 
 		arx_title = "ARX model for " + self.fileName 
-		# print lower_conf
 		canvas = plt.figure()
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
 		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
-		# ax_arma.scatter(numpy.arange(0,len(lower_conf)), lower_conf, s=1)
-		# ax_arma.scatter(numpy.arange(0,len(upper_conf)), upper_conf, s=1)
-		# plt.xticks(tick_locations*len(endog_var),new_tick_labels)
 
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_arma.set_xlabel('Time (min)')
 		ax_arma.set_ylabel('Detrended Hrate (bpm)')
 		ax_arma.set_xlim(0,len(x_list1))
-
-		# Save and close
-		# pdf_pages.savefig(canvas,orientation='portrait')	
-		# plt.close()	
 
 		exert_title = "Positive error from ARX prediction" 
 		pw_title = "Power used as exog. var. for ARX" 
@@ -290,15 +265,17 @@ class rideData:
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
 		x_time_plots = numpy.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
 
+		# Initialize plotting figure
 		canvas = plt.figure()
 
+		# Get averaged variables
 		box_length = 90
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
 		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_means = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
+		
 		# Power-Time and Hrate-time curves (overlaid)
-
 		pw_t_ax = canvas.add_subplot(211)
 		pw_t_ax2 = pw_t_ax.twinx()
 		pw_title = "Power-Hrate response for " + self.fileName 
