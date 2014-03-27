@@ -27,6 +27,12 @@ class rideData:
 		self.untrimmed_hr = []
 		self.untrimmed_pw = []
 
+		self.endog_list = []
+		self.exog_list = []
+		self.mle_prediction = []
+		self.mle_param = None
+		self.mle_resid = []
+
 	#---------------------------------------------------
 	def clean_ride_data(self):
 		"""Function winsorizes / trims hrate and power data."""
@@ -152,11 +158,12 @@ class rideData:
 		hr_val = power*power_hr_slope + intercept
 		return hr_val	
 
+
 	#---------------------------------------------------
-	def print_time_analysis(self, pdf_pages):
+	def perform_time_analysis(self):
 		"""Function writes results for given ride object to pdf page"""
 	
-		print "Printing time analysis data for ",self.fileName
+		print "Running MLE analysis for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
 		minutes_per_box = 1.5
@@ -166,33 +173,43 @@ class rideData:
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
-		last_good_index = self.get_last_index_above(exog_var, 5)
+		last_good_index = self.get_last_index_above(exog_var, 2)
 		exog_var = exog_var[0:last_good_index]
 		endog_var = endog_var[0:last_good_index]
 
-		endog_var = tsa.detrend(endog_var)
+		if len(exog_var):
+			endog_var = tsa.detrend(endog_var)
 
-		diff_endog = self.difference_list(endog_var)
 
-		p = 0
-		q = 0
-		d = 0
-		model_order = (p,d,q)
-		model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
-		model_results = model.fit()
-		prediction = model_results.fittedvalues
-		residuals = model_results.resid
-		min_resid = numpy.min(residuals)
-		power_mean = numpy.mean(exog_var)
-		resid_mean = numpy.mean(numpy.abs(residuals))
+			p = 0
+			q = 0
+			d = 0
+			model_order = (p,d,q)
+			model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
+			model_results = model.fit()
 
-		dev_from_pw_mean = numpy.abs(exog_var - power_mean)
-		resid_dev_from_mean = residuals - power_mean
-		exog_dev_from_mean = exog_var - power_mean
+			self.endog_var = endog_var
+			self.exog_var = exog_var
+			self.mle_prediction = model_results.fittedvalues
+			self.mle_resid = model_results.resid
 
+			self.mle_param = model_results.params[1]
+
+
+
+	#---------------------------------------------------
+	def print_time_analysis(self, pdf_pages):
+		"""Function writes results for given ride object to pdf page"""
+	
+		print "Printing time analysis data for ",self.fileName
+
+		endog_var = self.endog_var
+		exog_var = self.exog_var
+
+		prediction = self.mle_prediction
+		residuals = self.mle_resid
 		error_list = [0]*len(residuals)
 
-		power_floor = power_mean
 		for index, resid_val in enumerate(residuals):
 			power_val = exog_var[index]
 			if resid_val > 0:
@@ -496,6 +513,7 @@ class analysis_driver:
 
 			ride_obj = rideData(fileName, it)
 			ride_obj.clean_ride_data()
+			ride_obj.perform_time_analysis()
 			self.ride_obj_list.append(ride_obj)
 
 			if not ride_obj.has_good_data:
