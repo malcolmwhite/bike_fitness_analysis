@@ -137,7 +137,7 @@ class rideData:
 			param1 = self.get_param1()
 			param2 = self.get_param2()
 			param3 = self.get_param3()
-			fitness_param = 0.5*param1 +  0.3*param2 + 0.2*param3
+			fitness_param = 0.5*param1 +  0.35*param2 + 0.15*param3
 		return fitness_param
 
 	#---------------------------------------------------
@@ -220,10 +220,8 @@ class rideData:
 
 		# pw_floor = numpy.percentile(exog_var, 25)
 		pw_floor = 50
-		first_good_index = self.get_first_index_above(exog_var, 75)
+		first_good_index = self.get_first_index_above(exog_var, 10)
 		last_good_index = self.get_last_index_above(exog_var, pw_floor)
-		# print first_good_index, last_good_index, pw_floor
-		first_good_index=0
 		if last_good_index > first_good_index+1 and numpy.max(exog_var) > 0:
 			exog_var = exog_var[first_good_index:last_good_index]
 			endog_var = endog_var[first_good_index:last_good_index]
@@ -235,7 +233,7 @@ class rideData:
 				d = 0
 				model_order = (p,d,q)
 				model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
-				model_results = model.fit()
+				model_results = model.fit(method='css-mle')
 
 				self.endog_var = endog_var
 				self.exog_var = exog_var
@@ -265,7 +263,6 @@ class rideData:
 		prediction = self.mle_prediction
 		residuals = self.mle_resid
 
-
 		error_list = self.mle_pos_resid
 		max_error = numpy.max(error_list)
 
@@ -273,16 +270,19 @@ class rideData:
 		x_list1 = numpy.arange(0,len(prediction))
 		x_list2 = numpy.arange(0,len(error_list))
 
-		arx_title = "MLE fit for " + self.fileName 
 		canvas = plt.figure()
+
+		arx_title = "MLE fit for " + self.fileName 
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
 		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
-
 		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_arma.set_xlabel('Time (min)')
 		ax_arma.set_ylabel('Detrended Hrate (bpm)')
+		tick_locs, tick_labels =  plt.xticks()
+		tick_labels = tick_locs*3
+		plt.xticks(tick_locs, tick_labels)
 		ax_arma.set_xlim(0,len(x_list1))
 
 		exert_title = "Positive error from MLE prediction" 
@@ -291,6 +291,7 @@ class rideData:
 		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
 		ax_resid.set_xlabel('Time (min)')
 		ax_resid.set_ylabel('Residual (bpm)')
+		plt.xticks(tick_locs, tick_labels)
 		ax_resid.set_xlim(0,len(x_list2))
 		ax_resid.set_ylim(0,1.1*max_error)
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
@@ -298,6 +299,7 @@ class rideData:
 		ax_pw = canvas.add_subplot(312)
 		pw_title = "Power used as exog. var. for MLE" 
 		ax_pw.set_title(pw_title)
+		plt.xticks(tick_locs, tick_labels)
 		ax_pw.set_xlabel('Time (min)')
 		ax_pw.set_ylabel('Power (W)')
 		ax_pw.plot(x_list,exog_var,label='Power',color='red')
@@ -433,7 +435,6 @@ class rideData:
 		pw_means_high = []
 
 		for index, avg_pw in enumerate(pw_means):
-			# print avg_pw
 			if avg_pw < pw_breakpt:
 				hr_means_low.append(hr_means[index])
 				pw_means_low.append(avg_pw)
@@ -642,11 +643,10 @@ class analysis_driver:
 		ax_p1p2.set_xlabel('File number')
 		ax_p1p2.set_ylabel('Param 1, 2 values')
 		ax_p1p2.set_xlim([0, 1.1*max(valid_files_list)])
-		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Param1')
-		ax_p1p2.scatter(valid_files_list,param2_list, color='red', label='Param2')
-		ax_p1p2.scatter(valid_files_list,param3_list, color='green', label='Param3')
+		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Mean')
+		ax_p1p2.scatter(valid_files_list,param2_list, color='red', label='Regression')
+		ax_p1p2.scatter(valid_files_list,param3_list, color='green', label='MLE')
 		ax_resid = ax_p1p2.twinx()
-		# ax_resid.scatter(valid_files_list,resid_list, color='black', label='Resid')
 		ax_p1p2.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
 		# Plot fitness velocity on fitness scatter plot
