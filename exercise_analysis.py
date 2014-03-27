@@ -637,23 +637,21 @@ class analysis_driver:
 
 		# Show fitness plot with regression
 		canvas = plt.figure()
-		canvas.suptitle('Summary')
 		ax_p1p2 = canvas.add_subplot(221)
 		ax_p1p2.set_title('Parameter overview')
 		ax_p1p2.set_xlabel('File number')
-		ax_p1p2.set_ylabel('Param 1, 2 values')
+		ax_p1p2.set_ylabel('Score')
 		ax_p1p2.set_xlim([0, 1.1*max(valid_files_list)])
-		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Mean')
+		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Power Density')
 		ax_p1p2.scatter(valid_files_list,param2_list, color='red', label='Regression')
 		ax_p1p2.scatter(valid_files_list,param3_list, color='green', label='MLE')
-		ax_resid = ax_p1p2.twinx()
 		ax_p1p2.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
 		# Plot fitness velocity on fitness scatter plot
 		ax_fitScat = canvas.add_subplot(222)
 		ax_fitScat.set_title('Fitness velocity:'+"{:10.5f}".format(fitness_slope))
 		ax_fitScat.set_xlabel('File number')
-		ax_fitScat.set_ylabel('Fitness values')
+		ax_fitScat.set_ylabel('Score')
 		ax_fitScat.set_xlim([0, 1.1*max(valid_files_list)])
 		ax_fitScat.scatter(valid_files_list,fitness_list, label='Fitness values')
 		fitness_trend = [(x * fitness_slope + intercept) for x in valid_files_list] 
