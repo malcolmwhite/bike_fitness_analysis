@@ -550,6 +550,8 @@ class analysis_driver:
 	
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def analyze_files(self):
 		"""Function analyzes all available workout csv files"""
 		# Find workout files
@@ -583,6 +585,8 @@ class analysis_driver:
 
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def show_results(self):
 		"""Function shows results of analysis of workout files"""
 
@@ -596,6 +600,8 @@ class analysis_driver:
 
 	
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def print_individual_workouts(self,pdf_pages):
 		"""Function prints a page summarizing each recorded workout"""
 		for it, ride_obj in enumerate(self.ride_obj_list):
@@ -604,6 +610,8 @@ class analysis_driver:
 				ride_obj.print_time_analysis(pdf_pages)	
 
 
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def print_fitness_trend(self, pdf_pages):
 		"""Function prints summary page for all recorded workouts"""
