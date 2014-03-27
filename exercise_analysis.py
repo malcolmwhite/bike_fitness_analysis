@@ -32,7 +32,11 @@ class rideData:
 		self.mle_prediction = []
 		self.mle_param = None
 		self.mle_resid = []
+		self.mle_pos_resid = []
 
+
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def clean_ride_data(self):
 		"""Function winsorizes / trims hrate and power data."""
@@ -57,16 +61,6 @@ class rideData:
 		# Save power data for visualization. Hrate data saved above, before index shifting
 		self.untrimmed_pw = list(self.ride_dataFrame.Watts)						# Important that this copy is deep...
 
-		# Trim power floor
-		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Watts > power_floor]
-		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Watts > power_floor]
-
-		# Trim hr floor, hr ceiling
-		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate > hr_floor]
-		# self.ride_dataFrame.Watts = self.ride_dataFrame.Watts[self.ride_dataFrame.Hrate < hr_ceiling]
-		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate > hr_floor]
-		# self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate[self.ride_dataFrame.Hrate < hr_ceiling]
-
 		# Trim leading / lagging bad indices, reset index values		
 		first_good_index = max(self.ride_dataFrame.Watts.first_valid_index(),
 								self.ride_dataFrame.Hrate.first_valid_index())
@@ -82,6 +76,9 @@ class rideData:
 		self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')
 
 
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def get_bucket_hr_at(self,power):
 		box_length = 90
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
@@ -96,8 +93,12 @@ class rideData:
 		hr_val = power*power_hr_slope + intercept
 		return hr_val	
 
+
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def get_last_index_above(self,raw_list,min_acceptable):
-		dist_from_back = len(raw_list)
+		dist_from_back = len(raw_list)-1
 		for i, val in enumerate(reversed(raw_list)):
 			if val >= min_acceptable:
 				dist_from_back = i
@@ -106,6 +107,20 @@ class rideData:
 		return last_index
 
 
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
+	def get_first_index_above(self,raw_list,min_acceptable):
+		dist_from_front = len(raw_list)-1
+		for i, val in enumerate(raw_list):
+			if val >= min_acceptable:
+				dist_from_front = i
+				break
+		return dist_from_front
+
+
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_fitness_param(self):
 		"""Function returns one scalar to indicate a rider's cardio fitness level based on ride data
@@ -121,9 +136,12 @@ class rideData:
 		if self.has_good_data:
 			param1 = self.get_param1()
 			param2 = self.get_param2()
-			fitness_param = (param1 + param2) / 2
+			param3 = self.get_param3()
+			fitness_param = 0.5*param1 +  0.3*param2 + 0.2*param3
 		return fitness_param
 
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_param1(self):
 		"""Function returns mean power / mean heartrate"""
@@ -134,6 +152,8 @@ class rideData:
 			param1 = mean_power / mean_hrate
 		return param1
 
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_param2(self):
 		"""Function returns 1 / the hr at a given power determined
@@ -148,6 +168,22 @@ class rideData:
 
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
+	def get_param3(self):
+		"""Function returns 1 / the hr at a given power determined
+		 by least squares regression of pw-hr distr
+		 """
+		param2 = 0
+		if self.has_good_data:
+			scale_hr_param = 0.2			
+			param2 = scale_hr_param * (1 / self.mle_param)
+		return param2		
+
+
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def get_hr_at(self, power):
 		"""Function returns heartrate at a given power value for
 		 ride data based on solving y=mx+b on regression parameters
@@ -160,43 +196,63 @@ class rideData:
 
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
+	def get_sum_pos_resid(self):
+		return numpy.sum(self.mle_pos_resid)
+
+
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def perform_time_analysis(self):
 		"""Function writes results for given ride object to pdf page"""
 	
 		print "Running MLE analysis for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		minutes_per_box = 1.5
+		minutes_per_box = 3
 		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
-		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
+
 		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
-		last_good_index = self.get_last_index_above(exog_var, 2)
-		exog_var = exog_var[0:last_good_index]
-		endog_var = endog_var[0:last_good_index]
+		# pw_floor = numpy.percentile(exog_var, 25)
+		pw_floor = 50
+		first_good_index = self.get_first_index_above(exog_var, 75)
+		last_good_index = self.get_last_index_above(exog_var, pw_floor)
+		# print first_good_index, last_good_index, pw_floor
+		first_good_index=0
+		if last_good_index > first_good_index+1 and numpy.max(exog_var) > 0:
+			exog_var = exog_var[first_good_index:last_good_index]
+			endog_var = endog_var[first_good_index:last_good_index]
 
-		if len(exog_var):
-			endog_var = tsa.detrend(endog_var)
+			if len(exog_var):
+				endog_var = tsa.detrend(endog_var)
+				p = 0
+				q = 0
+				d = 0
+				model_order = (p,d,q)
+				model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
+				model_results = model.fit()
+
+				self.endog_var = endog_var
+				self.exog_var = exog_var
+				self.mle_prediction = model_results.fittedvalues
+				self.mle_resid = model_results.resid
+
+				self.mle_param = model_results.params[1]
+
+				error_list = [0]*len(model_results.resid)
+				for index, resid_val in enumerate(model_results.resid):
+					if resid_val > 0:
+						error_list[index] = resid_val
+				self.mle_pos_resid = error_list
 
 
-			p = 0
-			q = 0
-			d = 0
-			model_order = (p,d,q)
-			model = arma.ARIMA(endog_var,order=model_order,exog=exog_var)
-			model_results = model.fit()
-
-			self.endog_var = endog_var
-			self.exog_var = exog_var
-			self.mle_prediction = model_results.fittedvalues
-			self.mle_resid = model_results.resid
-
-			self.mle_param = model_results.params[1]
-
-
-
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def print_time_analysis(self, pdf_pages):
 		"""Function writes results for given ride object to pdf page"""
@@ -208,13 +264,9 @@ class rideData:
 
 		prediction = self.mle_prediction
 		residuals = self.mle_resid
-		error_list = [0]*len(residuals)
 
-		for index, resid_val in enumerate(residuals):
-			power_val = exog_var[index]
-			if resid_val > 0:
-				error_list[index] = resid_val
 
+		error_list = self.mle_pos_resid
 		max_error = numpy.max(error_list)
 
 		x_list = numpy.arange(0,len(exog_var))
@@ -261,6 +313,8 @@ class rideData:
 
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def difference_list(self, original_list):
 		d1 = original_list[1:]
 		d2 = original_list[:-1]
@@ -270,11 +324,15 @@ class rideData:
 
 
 	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
 	def get_box_list(self, original_list, box_length):
 		box_list = [numpy.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
 		return box_list
 
 
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def print_regressions(self, pdf_pages):
 		"""Function writes results for given ride object to pdf page"""
@@ -343,6 +401,8 @@ class rideData:
 		plt.close()	
 
 
+	#---------------------------------------------------
+	#---------------------------------------------------
 	#---------------------------------------------------
 	def print_breakpt_regressions(self, pdf_pages):
 		"""Function writes results for given ride object to pdf page"""
@@ -501,7 +561,6 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
-		# numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
@@ -550,6 +609,8 @@ class analysis_driver:
 		fitness_list = []
 		param1_list = []
 		param2_list = []
+		param3_list = []
+		resid_list = []
 		valid_files_list = []
 
 		title_plt = plt.figure()
@@ -564,6 +625,8 @@ class analysis_driver:
 				fitness_list.append(ride_obj.get_fitness_param())
 				param1_list.append(ride_obj.get_param1())
 				param2_list.append(ride_obj.get_param2())
+				param3_list.append(ride_obj.get_param3())
+				resid_list.append(ride_obj.get_sum_pos_resid())
 				valid_files_list.append(it)
 
 		# Run regression on fitness values to determine progress
@@ -581,6 +644,9 @@ class analysis_driver:
 		ax_p1p2.set_xlim([0, 1.1*max(valid_files_list)])
 		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Param1')
 		ax_p1p2.scatter(valid_files_list,param2_list, color='red', label='Param2')
+		ax_p1p2.scatter(valid_files_list,param3_list, color='green', label='Param3')
+		ax_resid = ax_p1p2.twinx()
+		# ax_resid.scatter(valid_files_list,resid_list, color='black', label='Resid')
 		ax_p1p2.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
 		# Plot fitness velocity on fitness scatter plot
