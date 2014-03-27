@@ -159,13 +159,14 @@ class rideData:
 		print "Printing time analysis data for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		minutes_per_box = 1
+		minutes_per_box = 1.5
 		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
 		# endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill')),box_size)
-		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate.fillna(method='bfill') - self.ride_dataFrame.Hrate.fillna(method='bfill').mean()),box_size)
+		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')
+		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
-		last_good_index = self.get_last_index_above(exog_var, 2)
+		last_good_index = self.get_last_index_above(exog_var, 5)
 		exog_var = exog_var[0:last_good_index]
 		endog_var = endog_var[0:last_good_index]
 
@@ -173,7 +174,7 @@ class rideData:
 
 		diff_endog = self.difference_list(endog_var)
 
-		p = 5
+		p = 0
 		q = 0
 		d = 0
 		model_order = (p,d,q)
@@ -194,7 +195,7 @@ class rideData:
 		power_floor = power_mean
 		for index, resid_val in enumerate(residuals):
 			power_val = exog_var[index]
-			if power_val > power_floor and resid_val > 0:
+			if resid_val > 0:
 				error_list[index] = resid_val
 
 		max_error = numpy.max(error_list)
@@ -203,7 +204,7 @@ class rideData:
 		x_list1 = numpy.arange(0,len(prediction))
 		x_list2 = numpy.arange(0,len(error_list))
 
-		arx_title = "ARX model for " + self.fileName 
+		arx_title = "MLE fit for " + self.fileName 
 		canvas = plt.figure()
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
@@ -215,9 +216,8 @@ class rideData:
 		ax_arma.set_ylabel('Detrended Hrate (bpm)')
 		ax_arma.set_xlim(0,len(x_list1))
 
-		exert_title = "Positive error from ARX prediction" 
-		pw_title = "Power used as exog. var. for ARX" 
-		ax_resid = canvas.add_subplot(312)
+		exert_title = "Positive error from MLE prediction" 
+		ax_resid = canvas.add_subplot(313)
 		ax_resid.set_title(exert_title)
 		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
 		ax_resid.set_xlabel('Time (min)')
@@ -226,7 +226,8 @@ class rideData:
 		ax_resid.set_ylim(0,1.1*max_error)
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
-		ax_pw = canvas.add_subplot(313)
+		ax_pw = canvas.add_subplot(312)
+		pw_title = "Power used as exog. var. for MLE" 
 		ax_pw.set_title(pw_title)
 		ax_pw.set_xlabel('Time (min)')
 		ax_pw.set_ylabel('Power (W)')
@@ -256,6 +257,7 @@ class rideData:
 		box_list = [numpy.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
 		return box_list
 
+
 	#---------------------------------------------------
 	def print_regressions(self, pdf_pages):
 		"""Function writes results for given ride object to pdf page"""
@@ -269,7 +271,7 @@ class rideData:
 		canvas = plt.figure()
 
 		# Get averaged variables
-		box_length = 90
+		box_length = 60
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
 		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
@@ -316,6 +318,111 @@ class rideData:
 		fitness_trend = [(x_it * power_hr_slope + intercept) for x_it in x] 
 		distr_ax.axis('auto')
 		distr_ax.plot(x,fitness_trend, linewidth=2, color='red')
+
+		canvas.tight_layout()
+
+		# Save and close
+		pdf_pages.savefig(canvas,orientation='portrait')	
+		plt.close()	
+
+
+	#---------------------------------------------------
+	def print_breakpt_regressions(self, pdf_pages):
+		"""Function writes results for given ride object to pdf page"""
+	
+		print "Printing regression data for ",self.fileName
+
+		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
+		x_time_plots = numpy.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
+
+		# Initialize plotting figure
+		canvas = plt.figure()
+
+		shifted_hr = self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')
+		full_pw_list = self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')
+
+		# Get averaged variables
+		box_length = 90
+		pw_breakpt = 120
+		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
+		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
+		
+		hr_means = [numpy.mean(shifted_hr[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		pw_means = [numpy.mean(full_pw_list[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
+		
+		hr_means_low = []
+		hr_means_high = []
+		pw_means_low =  []
+		pw_means_high = []
+
+		for index, avg_pw in enumerate(pw_means):
+			# print avg_pw
+			if avg_pw < pw_breakpt:
+				hr_means_low.append(hr_means[index])
+				pw_means_low.append(avg_pw)
+			else:
+				hr_means_high.append(hr_means[index])
+				pw_means_high.append(avg_pw)
+		
+		# Power-Time and Hrate-time curves (overlaid)
+		pw_t_ax = canvas.add_subplot(211)
+		pw_t_ax2 = pw_t_ax.twinx()
+		pw_title = "Power-Hrate response for " + self.fileName 
+		pw_t_ax.set_title(pw_title)
+		pw_t_ax.set_ylabel('Hrate (bpm)')
+		pw_t_ax.set_xlabel('Time (minutes)')
+		x_list = numpy.arange(len(self.untrimmed_hr)) * minutes_per_tick
+		box_pos = x_list[0::box_length]
+		pw_t_plot2 = pw_t_ax2.boxplot(pw_boxes, sym='',positions=box_pos)
+		pw_t_ax2.xaxis.cla()
+		pw_t_ax2.set_ylabel('Power (W)')
+		pw_t_ax2.yaxis.label.set_color('blue')
+		pw_t_plot1 = pw_t_ax.plot(x_list, self.untrimmed_hr, color='red')
+		pw_t_ax.yaxis.label.set_color('red')
+		pw_t_ax.tick_params(axis='y', colors='red')
+		pw_t_ax2.tick_params(axis='y', colors='blue')
+
+		# Hrate-Power Gaussian kde
+		x = pw_means
+		y = hr_means
+		x_low = pw_means_low
+		y_low = hr_means_low
+		# print len(x_low), len(y_low)
+		# print x_low[0][3]
+		x_high = pw_means_high
+		y_high = hr_means_high		
+		power_hr_slope_low, intercept_low, r_value_low, p_value_low, std_err_low = st.linregress(x_low,y_low)
+		power_hr_slope_high, intercept_high, r_value_high, p_value_high, std_err_high = st.linregress(x_high,y_high)
+		# print x_low
+		pw_x_intersection = (intercept_high - intercept_low) / (power_hr_slope_low - power_hr_slope_high) 
+		# pw_x_intersection = pw_breakpt
+		xmin = numpy.min(x)
+		xmax = numpy.max(x)
+		ymin = numpy.min(y)
+		ymax = numpy.max(y)
+		values = numpy.vstack([x,y])
+		kernel = st.gaussian_kde(values)
+		X, Y = numpy.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+		positions = numpy.vstack([X.ravel(), Y.ravel()])
+		Z = numpy.reshape(kernel(positions).T, X.shape)
+		distr_ax = canvas.add_subplot(212)
+		distr_title = "Power-Hrate distr. with regression (r^2:" + "{:10.3f}".format(r_value_low*r_value_low) + ")"
+		distr_ax.set_ylabel('Hrate (bpm)')
+		distr_ax.set_xlabel('Power (Watts)')
+		distr_ax.set_title(distr_title)
+		distr_ax.imshow(numpy.rot90(Z), cmap=plt.cm.gist_earth_r,
+								extent=[xmin, xmax, ymin, ymax])
+		# x_low = xrange(0,int(pw_x_intersection)-1)
+		# x_high = xrange(int(pw_x_intersection),int(pw_x_intersection)+len)
+		print pw_x_intersection
+		pw_x_intersection = int(pw_x_intersection)
+		x_list_low = xrange(0,pw_x_intersection-1)
+		x_list_high = xrange(pw_x_intersection,int(xmax))
+		fitness_trend_low = [(x_it * power_hr_slope_low + intercept_low) for x_it in x_list_low] 
+		fitness_trend_high = [(x_it * power_hr_slope_high + intercept_high) for x_it in x_list_high] 
+		distr_ax.axis('auto')
+		distr_ax.scatter(x_list_low,fitness_trend_low, color='red')
+		distr_ax.scatter(x_list_high,fitness_trend_high, color='blue')
 
 		canvas.tight_layout()
 
@@ -377,6 +484,7 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
+		# numFiles = 1
 		for it in range(1,numFiles+1):
 			lowest_accepted_r2 = 0
 			# Determine filename
