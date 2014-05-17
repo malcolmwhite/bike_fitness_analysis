@@ -565,7 +565,6 @@ class analysis_driver:
 
 		# Loop over all the files and analyze...
 		for it in range(1,numFiles+1):
-			lowest_accepted_r2 = 0
 			# Determine filename
 			fileName = self.working_directory + "/workouts"
 			if it > 1:
@@ -624,7 +623,7 @@ class analysis_driver:
 
 		title_plt = plt.figure()
 		title_plt.text(0.05,0.7,"Fitness evaluation using (1) linear regression of time avgeraged HR v. Power and")
-		title_plt.text(0.31,0.65,"(2) ARX of HRate with exogenous input of power")
+		title_plt.text(0.31,0.65,"(2) MLE fit of HRate - Power relationship in time")
 		pdf_pages.savefig(title_plt, orientation='portrait')	
 
 
