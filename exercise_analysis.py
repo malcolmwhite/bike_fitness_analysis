@@ -266,33 +266,34 @@ class rideData:
 		error_list = self.mle_pos_resid
 		max_error = np.max(error_list)
 
-		x_list = np.arange(0,len(exog_var))
-		x_list1 = np.arange(0,len(prediction))
-		x_list2 = np.arange(0,len(error_list))
+		endog_x_list = np.arange(0,len(endog_var))
+		exog_x_list = np.arange(0,len(exog_var))
+		prediction_x_list = np.arange(0,len(prediction))
+		error_x_list = np.arange(0,len(error_list))
 
 		canvas = plt.figure()
 
 		arx_title = "MLE fit for " + self.fileName 
 		ax_arma = canvas.add_subplot(311)
 		ax_arma.set_title(arx_title)
-		ax_arma.plot(x_list,endog_var,label='HR Data',color='red')
-		ax_arma.plot(x_list1,prediction,label='Prediction',color='green')
+		ax_arma.plot(endog_x_list, endog_var,label='HR Data',color='red')
+		ax_arma.plot(prediction_x_list, prediction,label='Prediction',color='green')
 		ax_arma.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 		ax_arma.set_xlabel('Time (min)')
 		ax_arma.set_ylabel('Detrended Hrate (bpm)')
 		tick_locs, tick_labels =  plt.xticks()
 		tick_labels = tick_locs*3
 		plt.xticks(tick_locs, tick_labels)
-		ax_arma.set_xlim(0,len(x_list1))
+		ax_arma.set_xlim(0,len(prediction_x_list))
 
 		exert_title = "Positive error from MLE prediction" 
 		ax_resid = canvas.add_subplot(313)
 		ax_resid.set_title(exert_title)
-		ax_resid.plot(x_list2,error_list,label='Residuals',color='green')
+		ax_resid.plot(error_x_list, error_list,label='Residuals',color='green')
 		ax_resid.set_xlabel('Time (min)')
 		ax_resid.set_ylabel('Residual (bpm)')
 		plt.xticks(tick_locs, tick_labels)
-		ax_resid.set_xlim(0,len(x_list2))
+		ax_resid.set_xlim(0,len(error_x_list))
 		ax_resid.set_ylim(0,1.1*max_error)
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
@@ -302,9 +303,9 @@ class rideData:
 		plt.xticks(tick_locs, tick_labels)
 		ax_pw.set_xlabel('Time (min)')
 		ax_pw.set_ylabel('Power (W)')
-		ax_pw.plot(x_list,exog_var,label='Power',color='red')
+		ax_pw.plot(exog_x_list,exog_var,label='Power',color='red')
 		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
-		ax_pw.set_xlim(0,len(x_list))
+		ax_pw.set_xlim(0,len(exog_x_list))
 
 		canvas.tight_layout()
 
@@ -318,8 +319,7 @@ class rideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_box_list(self, original_list, box_length):
-		box_list = [np.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
-		return box_list
+		return [np.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
 
 
 	#---------------------------------------------------
