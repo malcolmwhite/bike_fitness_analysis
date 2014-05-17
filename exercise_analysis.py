@@ -265,6 +265,8 @@ class rideData:
 
 		error_list = self.mle_pos_resid
 		max_error = np.max(error_list)
+		error_sum = np.sum(error_list)
+		error_density = error_sum / len(error_list)
 
 		endog_x_list = np.arange(0,len(endog_var))
 		exog_x_list = np.arange(0,len(exog_var))
@@ -287,9 +289,9 @@ class rideData:
 		ax_arma.set_xlim(0,len(prediction_x_list))
 
 		exert_title = "Positive error from MLE prediction" 
-		ax_resid = canvas.add_subplot(313)
+		ax_resid = canvas.add_subplot(312)
 		ax_resid.set_title(exert_title)
-		ax_resid.plot(error_x_list, error_list,label='Residuals',color='green')
+		ax_resid.plot(error_x_list, error_list,label='Residuals',color='blue')
 		ax_resid.set_xlabel('Time (min)')
 		ax_resid.set_ylabel('Residual (bpm)')
 		plt.xticks(tick_locs, tick_labels)
@@ -297,15 +299,29 @@ class rideData:
 		ax_resid.set_ylim(0,1.1*max_error)
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
-		ax_pw = canvas.add_subplot(312)
-		pw_title = "Power used as exog. var. for MLE" 
-		ax_pw.set_title(pw_title)
-		plt.xticks(tick_locs, tick_labels)
-		ax_pw.set_xlabel('Time (min)')
-		ax_pw.set_ylabel('Power (W)')
-		ax_pw.plot(exog_x_list,exog_var,label='Power',color='red')
-		ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
-		ax_pw.set_xlim(0,len(exog_x_list))
+		# ax_pw = ax_resid.twinx()
+		# # pw_title = "Power used as exog. var. for MLE" 
+		# # ax_pw.set_title(pw_title)
+		# plt.xticks(tick_locs, tick_labels)
+		# ax_pw.set_ylabel('Power (W)')
+		# ax_pw.plot(exog_x_list,exog_var,label='Power',color='red')
+		# ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
+		# ax_pw.set_xlim(0,len(exog_x_list))
+
+		# Fitness parameters
+		ax_param = canvas.add_subplot(313)
+		param1 = self.get_param1()
+		param2 = self.get_param2()
+		param3 = self.get_param3()
+		fitness = self.get_fitness_param()
+		ax_param.text(0.1,0.7,"Parameter 1: "+str(param1)[0:6])		
+		ax_param.text(0.1,0.5,"Parameter 2: "+str(param2)[0:6])		
+		ax_param.text(0.1,0.3,"Parameter 3: "+str(param3)[0:6])		
+		ax_param.text(0.1,0.1,"Summary Parameter: "+str(fitness)[0:6])	
+		ax_param.text(0.6,0.5,"MLE error sum: "+str(error_sum)[0:6])	
+		ax_param.text(0.6,0.3,"MLE error density: "+str(error_density)[0:6])	
+		ax_param.set_xticks([])	
+		ax_param.set_yticks([])	
 
 		canvas.tight_layout()
 
@@ -553,6 +569,7 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
+		# numFiles = 1
 		for it in range(1,numFiles+1):
 			# Determine filename
 			fileName = self.working_directory + "/workouts"
