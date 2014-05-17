@@ -1,6 +1,7 @@
 import scipy.stats as st
 import matplotlib.pyplot as plt
-import sys, getopt, os, math, glob, numpy
+import sys, getopt, os, math, glob
+import numpy as np
 import pandas.io.parsers as parse
 from pandas import DataFrame as df
 import statsmodels.nonparametric.kernel_regression as kr
@@ -27,8 +28,8 @@ class rideData:
 		self.untrimmed_hr = []
 		self.untrimmed_pw = []
 
-		self.endog_list = []
-		self.exog_list = []
+		self.endog_var = []
+		self.exog_var = []
 		self.mle_prediction = []
 		self.mle_param = None
 		self.mle_resid = []
@@ -70,7 +71,7 @@ class rideData:
 			self.has_good_data = True	
 			self.ride_dataFrame = self.ride_dataFrame.ix[first_good_index:last_good_index]
 			num_good_indices = last_good_index - first_good_index
-			self.ride_dataFrame = self.ride_dataFrame.set_index(numpy.arange(0,num_good_indices+1))
+			self.ride_dataFrame = self.ride_dataFrame.set_index(np.arange(0,num_good_indices+1))
 
 		# Fill Hrate NaNs
 		self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')
@@ -82,8 +83,8 @@ class rideData:
 	def get_bucket_hr_at(self,power):
 		box_length = 90
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		hr_boxes = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
-		pw_boxes = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
+		hr_boxes = [np.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		pw_boxes = [np.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		
 		last_good_index = self.get_last_index_above(pw_boxes,1)
 		hr_boxes = hr_boxes[:last_good_index]
@@ -174,11 +175,11 @@ class rideData:
 		"""Function returns 1 / the hr at a given power determined
 		 by least squares regression of pw-hr distr
 		 """
-		param2 = 0
+		param3 = 0
 		if self.has_good_data:
 			scale_hr_param = 0.2			
-			param2 = scale_hr_param * (1 / self.mle_param)
-		return param2		
+			param3 = scale_hr_param * (1 / self.mle_param)
+		return param3		
 
 
 	#---------------------------------------------------
@@ -199,7 +200,7 @@ class rideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_sum_pos_resid(self):
-		return numpy.sum(self.mle_pos_resid)
+		return np.sum(self.mle_pos_resid)
 
 
 	#---------------------------------------------------
@@ -218,11 +219,10 @@ class rideData:
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
-		# pw_floor = numpy.percentile(exog_var, 25)
 		pw_floor = 50
 		first_good_index = self.get_first_index_above(exog_var, 10)
 		last_good_index = self.get_last_index_above(exog_var, pw_floor)
-		if last_good_index > first_good_index+1 and numpy.max(exog_var) > 0:
+		if last_good_index > first_good_index+1 and np.max(exog_var) > 0:
 			exog_var = exog_var[first_good_index:last_good_index]
 			endog_var = endog_var[first_good_index:last_good_index]
 
@@ -264,11 +264,11 @@ class rideData:
 		residuals = self.mle_resid
 
 		error_list = self.mle_pos_resid
-		max_error = numpy.max(error_list)
+		max_error = np.max(error_list)
 
-		x_list = numpy.arange(0,len(exog_var))
-		x_list1 = numpy.arange(0,len(prediction))
-		x_list2 = numpy.arange(0,len(error_list))
+		x_list = np.arange(0,len(exog_var))
+		x_list1 = np.arange(0,len(prediction))
+		x_list2 = np.arange(0,len(error_list))
 
 		canvas = plt.figure()
 
@@ -317,19 +317,8 @@ class rideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	#---------------------------------------------------
-	def difference_list(self, original_list):
-		d1 = original_list[1:]
-		d2 = original_list[:-1]
-		diff_list = [val1 - val2 for val1, val2 in zip(d1, d2)]
-		return diff_list
-
-
-
-	#---------------------------------------------------
-	#---------------------------------------------------
-	#---------------------------------------------------
 	def get_box_list(self, original_list, box_length):
-		box_list = [numpy.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
+		box_list = [np.mean(original_list[x:x+box_length]) for x in xrange(0, len(original_list), box_length)]
 		return box_list
 
 
@@ -342,7 +331,7 @@ class rideData:
 		print "Printing regression data for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		x_time_plots = numpy.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
+		x_time_plots = np.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
 
 		# Initialize plotting figure
 		canvas = plt.figure()
@@ -351,8 +340,8 @@ class rideData:
 		box_length = 60
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
-		hr_means = [numpy.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
-		pw_means = [numpy.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
+		hr_means = [np.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		pw_means = [np.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		
 		# Power-Time and Hrate-time curves (overlaid)
 		pw_t_ax = canvas.add_subplot(211)
@@ -361,7 +350,7 @@ class rideData:
 		pw_t_ax.set_title(pw_title)
 		pw_t_ax.set_ylabel('Hrate (bpm)')
 		pw_t_ax.set_xlabel('Time (minutes)')
-		x_list = numpy.arange(len(self.untrimmed_hr)) * minutes_per_tick
+		x_list = np.arange(len(self.untrimmed_hr)) * minutes_per_tick
 		box_pos = x_list[0::box_length]
 		pw_t_plot2 = pw_t_ax2.boxplot(pw_boxes, sym='',positions=box_pos)
 		pw_t_ax2.xaxis.cla()
@@ -376,21 +365,21 @@ class rideData:
 		x = pw_means
 		y = hr_means		
 		power_hr_slope, intercept, r_value, p_value, std_err = st.linregress(x,y)
-		xmin = numpy.min(x)
-		xmax = numpy.max(x)
-		ymin = numpy.min(y)
-		ymax = numpy.max(y)
-		values = numpy.vstack([x,y])
+		xmin = np.min(x)
+		xmax = np.max(x)
+		ymin = np.min(y)
+		ymax = np.max(y)
+		values = np.vstack([x,y])
 		kernel = st.gaussian_kde(values)
-		X, Y = numpy.mgrid[xmin:xmax:100j, ymin:ymax:100j]
-		positions = numpy.vstack([X.ravel(), Y.ravel()])
-		Z = numpy.reshape(kernel(positions).T, X.shape)
+		X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+		positions = np.vstack([X.ravel(), Y.ravel()])
+		Z = np.reshape(kernel(positions).T, X.shape)
 		distr_ax = canvas.add_subplot(212)
 		distr_title = "Power-Hrate distr. with regression (r^2:" + "{:10.3f}".format(r_value*r_value) + ")"
 		distr_ax.set_ylabel('Hrate (bpm)')
 		distr_ax.set_xlabel('Power (Watts)')
 		distr_ax.set_title(distr_title)
-		distr_ax.imshow(numpy.rot90(Z), cmap=plt.cm.gist_earth_r,
+		distr_ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
 								extent=[xmin, xmax, ymin, ymax])
 		fitness_trend = [(x_it * power_hr_slope + intercept) for x_it in x] 
 		distr_ax.axis('auto')
@@ -412,7 +401,7 @@ class rideData:
 		print "Printing regression data for ",self.fileName
 
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		x_time_plots = numpy.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
+		x_time_plots = np.arange(len(self.ride_dataFrame.Minutes)) * minutes_per_tick
 
 		# Initialize plotting figure
 		canvas = plt.figure()
@@ -426,8 +415,8 @@ class rideData:
 		hr_boxes = [self.untrimmed_hr[x:x+box_length] for x in xrange(0, len(self.untrimmed_hr), box_length)]
 		pw_boxes = [self.untrimmed_pw[x:x+box_length] for x in xrange(0, len(self.untrimmed_pw), box_length)]
 		
-		hr_means = [numpy.mean(shifted_hr[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
-		pw_means = [numpy.mean(full_pw_list[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
+		hr_means = [np.mean(shifted_hr[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		pw_means = [np.mean(full_pw_list[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		
 		hr_means_low = []
 		hr_means_high = []
@@ -449,7 +438,7 @@ class rideData:
 		pw_t_ax.set_title(pw_title)
 		pw_t_ax.set_ylabel('Hrate (bpm)')
 		pw_t_ax.set_xlabel('Time (minutes)')
-		x_list = numpy.arange(len(self.untrimmed_hr)) * minutes_per_tick
+		x_list = np.arange(len(self.untrimmed_hr)) * minutes_per_tick
 		box_pos = x_list[0::box_length]
 		pw_t_plot2 = pw_t_ax2.boxplot(pw_boxes, sym='',positions=box_pos)
 		pw_t_ax2.xaxis.cla()
@@ -474,21 +463,21 @@ class rideData:
 		# print x_low
 		pw_x_intersection = (intercept_high - intercept_low) / (power_hr_slope_low - power_hr_slope_high) 
 		# pw_x_intersection = pw_breakpt
-		xmin = numpy.min(x)
-		xmax = numpy.max(x)
-		ymin = numpy.min(y)
-		ymax = numpy.max(y)
-		values = numpy.vstack([x,y])
+		xmin = np.min(x)
+		xmax = np.max(x)
+		ymin = np.min(y)
+		ymax = np.max(y)
+		values = np.vstack([x,y])
 		kernel = st.gaussian_kde(values)
-		X, Y = numpy.mgrid[xmin:xmax:100j, ymin:ymax:100j]
-		positions = numpy.vstack([X.ravel(), Y.ravel()])
-		Z = numpy.reshape(kernel(positions).T, X.shape)
+		X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+		positions = np.vstack([X.ravel(), Y.ravel()])
+		Z = np.reshape(kernel(positions).T, X.shape)
 		distr_ax = canvas.add_subplot(212)
 		distr_title = "Power-Hrate distr. with regression (r^2:" + "{:10.3f}".format(r_value_low*r_value_low) + ")"
 		distr_ax.set_ylabel('Hrate (bpm)')
 		distr_ax.set_xlabel('Power (Watts)')
 		distr_ax.set_title(distr_title)
-		distr_ax.imshow(numpy.rot90(Z), cmap=plt.cm.gist_earth_r,
+		distr_ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
 								extent=[xmin, xmax, ymin, ymax])
 		# x_low = xrange(0,int(pw_x_intersection)-1)
 		# x_high = xrange(int(pw_x_intersection),int(pw_x_intersection)+len)
@@ -671,7 +660,7 @@ class analysis_driver:
 		ax_plot_score.set_ylabel('Fitness values')
 		ax_plot_score.set_xlim([0, 1.1*max(valid_files_list)])
 		ax_plot_score.plot(valid_files_list,fitness_list, label='Fitness values')
-		coeff = numpy.polyfit(valid_files_list,fitness_list,2)
+		coeff = np.polyfit(valid_files_list,fitness_list,2)
 		fitness_curve = [(coeff[0]*x*x + coeff[1]*x + coeff[2]) for x in valid_files_list] 
 		ax_plot_score.set_title('Fitness acceleration:'+"{:10.7f}".format(2*coeff[0]))
 		ax_plot_score.plot(valid_files_list,fitness_curve, label='Curve fit')
