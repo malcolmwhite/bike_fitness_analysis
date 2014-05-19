@@ -1,14 +1,10 @@
 import scipy.stats as st
-import matplotlib.pyplot as plt
-import sys, getopt, os, math, glob
 import numpy as np
 import pandas.io.parsers as parse
 from pandas import DataFrame as df
 import statsmodels.nonparametric.kernel_regression as kr
 import statsmodels.tsa.arima_model as arma
 import statsmodels.tsa.tsatools as tsa
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.tight_layout as plt_l
 
 
 #==================================================================================================#

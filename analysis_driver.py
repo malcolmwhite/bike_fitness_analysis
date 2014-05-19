@@ -1,14 +1,4 @@
-import scipy.stats as st
-import matplotlib.pyplot as plt
-import sys, getopt, os, math, glob
-import numpy as np
-import pandas.io.parsers as parse
-from pandas import DataFrame as df
-import statsmodels.nonparametric.kernel_regression as kr
-import statsmodels.tsa.arima_model as arma
-import statsmodels.tsa.tsatools as tsa
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.tight_layout as plt_l
+import sys, getopt, os, glob
 import analyzeRideData as ard
 import printRideData as prd
 
@@ -65,7 +55,6 @@ class analysis_driver:
 			sys.exit()
 
 		# Loop over all the files and analyze...
-		# numFiles = 1
 		for it in range(1,numFiles+1):
 			# Determine filename
 			fileName = self.working_directory + "/workouts"
