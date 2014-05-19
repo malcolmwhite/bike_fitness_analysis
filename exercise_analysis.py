@@ -137,7 +137,8 @@ class rideData:
 			param1 = self.get_param1()
 			param2 = self.get_param2()
 			param3 = self.get_param3()
-			fitness_param = 0.5*param1 +  0.35*param2 + 0.15*param3
+			param4 = self.get_param4()
+			fitness_param = (param1 +  param2 + param3 + param4) / 4
 		return fitness_param
 
 	#---------------------------------------------------
@@ -163,7 +164,7 @@ class rideData:
 		if self.has_good_data:
 			token_power = 150		# 175 W seems to be at upper end of aerobic
 			scale_hr_param = 150			
-			param2 = scale_hr_param * (1 / self.get_bucket_hr_at(token_power))
+			param2 = scale_hr_param * (1.1 / self.get_bucket_hr_at(token_power))
 		return param2		
 
 
@@ -176,9 +177,24 @@ class rideData:
 		 """
 		param3 = 0
 		if self.has_good_data:
-			scale_hr_param = 0.2			
+			scale_hr_param = 0.275			
 			param3 = scale_hr_param * (1 / self.mle_param)
-		return param3		
+		return param3	
+
+	#---------------------------------------------------
+	#---------------------------------------------------
+	#---------------------------------------------------
+	def get_param4(self):
+		"""Evaluates fitness as a measure of mean power divided by indicator of mean fatigue.
+		 """
+		param4 = 0
+		if self.has_good_data:
+			mean_pw = self.ride_dataFrame.Watts[self.ride_dataFrame.Watts>1].mean()
+			error_list = self.mle_pos_resid				# Error corresponds to anaerobic resp.
+			error_sum = np.sum(error_list)
+			error_density = error_sum / len(error_list)		
+			param4 = (mean_pw / error_density / 55)
+		return param4	
 
 
 	#---------------------------------------------------
@@ -312,11 +328,13 @@ class rideData:
 		param1 = self.get_param1()
 		param2 = self.get_param2()
 		param3 = self.get_param3()
+		param4 = self.get_param4()
 		fitness = self.get_fitness_param()
 		ax_param.text(0.1,0.7,"Parameter 1: "+str(param1)[0:6])		
 		ax_param.text(0.1,0.5,"Parameter 2: "+str(param2)[0:6])		
 		ax_param.text(0.1,0.3,"Parameter 3: "+str(param3)[0:6])		
-		ax_param.text(0.1,0.1,"Summary Parameter: "+str(fitness)[0:6])	
+		ax_param.text(0.1,0.1,"Parameter 4: "+str(param4)[0:6])		
+		ax_param.text(0.6,0.1,"Summary Parameter: "+str(fitness)[0:6])	
 		ax_param.text(0.6,0.5,"MLE error sum: "+str(error_sum)[0:6])	
 		ax_param.text(0.6,0.3,"MLE error density: "+str(error_density)[0:6])	
 		ax_param.set_xticks([])	
@@ -623,6 +641,7 @@ class analysis_driver:
 		param1_list = []
 		param2_list = []
 		param3_list = []
+		param4_list = []
 		resid_list = []
 		valid_files_list = []
 
@@ -639,6 +658,7 @@ class analysis_driver:
 				param1_list.append(ride_obj.get_param1())
 				param2_list.append(ride_obj.get_param2())
 				param3_list.append(ride_obj.get_param3())
+				param4_list.append(ride_obj.get_param4())
 				resid_list.append(ride_obj.get_sum_pos_resid())
 				valid_files_list.append(it)
 
@@ -657,6 +677,7 @@ class analysis_driver:
 		ax_p1p2.scatter(valid_files_list,param1_list, color='blue', label='Power Density')
 		ax_p1p2.scatter(valid_files_list,param2_list, color='red', label='Regression')
 		ax_p1p2.scatter(valid_files_list,param3_list, color='green', label='MLE')
+		ax_p1p2.scatter(valid_files_list,param4_list, color='orange', label='Endurance')
 		ax_p1p2.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
 		# Plot fitness velocity on fitness scatter plot
