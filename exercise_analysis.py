@@ -186,6 +186,8 @@ class rideData:
 	#---------------------------------------------------
 	def get_param4(self):
 		"""Evaluates fitness as a measure of mean power divided by indicator of mean fatigue.
+		The correlation between hr-power nonlinearity and fatigue is somewhat speculative given
+		the fact that the rider is frequently in a transient metabolic/aerobic state. 
 		 """
 		param4 = 0
 		if self.has_good_data:
@@ -325,6 +327,8 @@ class rideData:
 
 		# Fitness parameters
 		ax_param = canvas.add_subplot(313)
+		param_title = "Overview of fitness parameters"
+		ax_param.set_title(param_title)
 		param1 = self.get_param1()
 		param2 = self.get_param2()
 		param3 = self.get_param3()
