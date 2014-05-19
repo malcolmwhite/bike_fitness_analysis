@@ -80,8 +80,7 @@ class rideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	#---------------------------------------------------
-	def get_bucket_hr_at(self,power):
-		box_length = 90
+	def get_bucket_hr_at(self,power,box_length=90):
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
 		hr_boxes = [np.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_boxes = [np.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
@@ -219,7 +218,7 @@ class rideData:
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
-		pw_floor = 50
+		pw_floor = 20
 		first_good_index = self.get_first_index_above(exog_var, 10)
 		last_good_index = self.get_last_index_above(exog_var, pw_floor)
 		if last_good_index > first_good_index+1 and np.max(exog_var) > 0:
@@ -227,7 +226,7 @@ class rideData:
 			endog_var = endog_var[first_good_index:last_good_index]
 
 			if len(exog_var):
-				endog_var = tsa.detrend(endog_var)
+				# endog_var = tsa.detrend(endog_var)
 				p = 0
 				q = 0
 				d = 0
