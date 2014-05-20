@@ -78,7 +78,9 @@ class analyzeRideData:
 	#---------------------------------------------------
 	def get_bucket_hr_at(self,power,box_length=90):
 		minutes_per_tick = self.ride_dataFrame.Minutes[1] - self.ride_dataFrame.Minutes[0]
-		hr_boxes = [np.mean(self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
+		# The below shift accounts for power-hr latency and is somewhat voodoo-ish.
+		hr_shift = 0
+		hr_boxes = [np.mean(self.ride_dataFrame.Hrate.shift(hr_shift).fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Hrate), box_length)]
 		pw_boxes = [np.mean(self.ride_dataFrame.Watts.fillna(method='bfill').fillna(method='ffill')[x:x+box_length]) for x in xrange(0, len(self.ride_dataFrame.Watts), box_length)]
 		
 		last_good_index = self.get_last_index_above(pw_boxes,1)
@@ -228,7 +230,7 @@ class analyzeRideData:
 		minutes_per_box = 3
 		box_size = int(minutes_per_box / minutes_per_tick)		# box_size < 1.5 min often produce non-stationary variables
 
-		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.shift(-23).fillna(method='bfill').fillna(method='ffill')
+		self.ride_dataFrame.Hrate = self.ride_dataFrame.Hrate.fillna(method='bfill').fillna(method='ffill')
 		endog_var = self.get_box_list(list(self.ride_dataFrame.Hrate - self.ride_dataFrame.Hrate.mean()),box_size)
 		exog_var = self.get_box_list(list(self.ride_dataFrame.Watts.fillna(method='ffill')),box_size)
 
@@ -240,6 +242,7 @@ class analyzeRideData:
 			endog_var = endog_var[first_good_index:last_good_index]
 
 			if len(exog_var):
+				# While typically helpful, detrending causes problems for short rides...
 				# endog_var = tsa.detrend(endog_var)
 				p = 0
 				q = 0
