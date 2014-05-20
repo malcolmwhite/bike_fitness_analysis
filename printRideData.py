@@ -44,8 +44,8 @@ class printRideData:
 		"""Function prints a page summarizing each recorded workout"""
 		for it, ride_obj in enumerate(self.ride_obj_list):
 			if ride_obj.has_good_data:
-				self.print_regressions(ride_obj)
-				self.print_time_analysis(ride_obj)	
+				self.print_left_page(ride_obj)
+				self.print_right_page(ride_obj)	
 
 
 	#---------------------------------------------------
@@ -129,7 +129,7 @@ class printRideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	#---------------------------------------------------
-	def print_time_analysis(self, ride_obj):
+	def print_right_page(self, ride_obj):
 		"""Function writes results for given ride object to pdf page"""
 	
 		print "Printing time analysis data for ",ride_obj.fileName
@@ -214,7 +214,7 @@ class printRideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	#---------------------------------------------------
-	def print_regressions(self, ride_obj):
+	def print_left_page(self, ride_obj):
 		"""Function writes results for given ride object to pdf page"""
 	
 		print "Printing regression data for ",ride_obj.fileName
