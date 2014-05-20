@@ -168,8 +168,8 @@ class analyzeRideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	def get_param3(self):
-		"""Function returns 1 / the hr at a given power determined
-		 by least squares regression of pw-hr distr
+		"""Function returns scale param / linear relationship between hr and power as determined
+			by arima model.
 		 """
 		param3 = 0
 		if self.has_good_data:
