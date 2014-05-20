@@ -193,7 +193,7 @@ class analyzeRideData:
 			error_list = self.mle_pos_resid				# Error corresponds to anaerobic resp.
 			error_sum = np.sum(error_list)
 			error_density = error_sum / len(error_list)		
-			param4 = (mean_pw / error_density / 55)
+			param4 = (mean_pw / error_density / 45)
 		return param4	
 
 
