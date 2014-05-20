@@ -176,14 +176,6 @@ class printRideData:
 		ax_resid.set_ylim(0,1.1*max_error)
 		ax_resid.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
 
-		# ax_pw = ax_resid.twinx()
-		# # pw_title = "Power used as exog. var. for MLE" 
-		# # ax_pw.set_title(pw_title)
-		# plt.xticks(tick_locs, tick_labels)
-		# ax_pw.set_ylabel('Power (W)')
-		# ax_pw.plot(exog_x_list,exog_var,label='Power',color='red')
-		# ax_pw.legend(loc=2, borderaxespad=0.,fontsize= 'xx-small')
-		# ax_pw.set_xlim(0,len(exog_x_list))
 
 		# Fitness parameters
 		ax_param = canvas.add_subplot(313)
@@ -285,7 +277,9 @@ class printRideData:
 	#---------------------------------------------------
 	#---------------------------------------------------
 	def print_breakpt_regressions(self, ride_obj):
-		"""Function writes results for given ride object to pdf page"""
+		"""Function writes results for given ride object to pdf page.
+			Under construction...
+		"""
 	
 		print "Printing regression data for ",ride_obj.fileName
 
@@ -343,15 +337,11 @@ class printRideData:
 		y = hr_means
 		x_low = pw_means_low
 		y_low = hr_means_low
-		# print len(x_low), len(y_low)
-		# print x_low[0][3]
 		x_high = pw_means_high
 		y_high = hr_means_high		
 		power_hr_slope_low, intercept_low, r_value_low, p_value_low, std_err_low = st.linregress(x_low,y_low)
 		power_hr_slope_high, intercept_high, r_value_high, p_value_high, std_err_high = st.linregress(x_high,y_high)
-		# print x_low
 		pw_x_intersection = (intercept_high - intercept_low) / (power_hr_slope_low - power_hr_slope_high) 
-		# pw_x_intersection = pw_breakpt
 		xmin = np.min(x)
 		xmax = np.max(x)
 		ymin = np.min(y)
@@ -368,9 +358,7 @@ class printRideData:
 		distr_ax.set_title(distr_title)
 		distr_ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
 								extent=[xmin, xmax, ymin, ymax])
-		# x_low = xrange(0,int(pw_x_intersection)-1)
-		# x_high = xrange(int(pw_x_intersection),int(pw_x_intersection)+len)
-		print pw_x_intersection
+
 		pw_x_intersection = int(pw_x_intersection)
 		x_list_low = xrange(0,pw_x_intersection-1)
 		x_list_high = xrange(pw_x_intersection,int(xmax))
